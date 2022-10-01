@@ -1,0 +1,8 @@
+#!/bin/sh
+while [ 1 ]
+do
+    echo $(date) about to connect forward
+	/usr/bin/ssh -i  {path/to/dropbearssh} {user@domainname} -R {remoteport}:localhost:{localport} -N -K 60 -y
+    sleep 120
+    echo $(date) finish sleep next loop forward
+done &

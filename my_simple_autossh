@@ -1,0 +1,9 @@
+#!/bin/sh
+while [ 1 ]
+do
+    echo $(date) about to connect
+    /usr/bin/ssh -i  {path/to/dropbearssh} {user@domainname} -R {remoteport}:localhost:{localport} -N -K 60 -y
+    echo $(date) connection lost, sleep and abt to reconnect
+    sleep 120
+    echo $(date) finish sleep next loop
+done &

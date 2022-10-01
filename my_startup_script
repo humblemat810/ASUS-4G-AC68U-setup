@@ -1,0 +1,89 @@
+#!bin/sh
+
+rm -rf /opt/bin
+cp -r /mnt/KIOXIA/myasus.arm /tmp/mnt/KIOXIA/asusware.arm
+
+if [ $? -ne 0 ]
+then
+
+TYPE='generic'
+
+unset LD_LIBRARY_PATH
+unset LD_PRELOAD
+
+ARCH=armv7sf-k2.6
+LOADER=ld-linux.so.3
+GLIBC=2.23
+
+echo 'Info: Checking for prerequisites and creating folders...'
+if [ -d /opt ]; then
+    echo 'Warning: Folder /opt exists!'
+else
+    mkdir /opt
+fi
+# no need to create many folders. entware-opt package creates most
+for folder in bin etc lib/opkg tmp var/lock
+do
+  if [ -d "/opt/$folder" ]; then
+    echo "Warning: Folder /opt/$folder exists!"
+    echo 'Warning: If something goes wrong please clean /opt folder and try again.'
+  else
+    mkdir -p /opt/$folder
+  fi
+done
+
+echo 'Info: Opkg package manager deployment...'
+URL=http://bin.entware.net/${ARCH}/installer
+wget $URL/opkg -O /opt/bin/opkg
+chmod 755 /opt/bin/opkg
+wget $URL/opkg.conf -O /opt/etc/opkg.conf
+
+echo 'Info: Basic packages installation...'
+/opt/bin/opkg update
+if [ $TYPE = 'alternative' ]; then
+  /opt/bin/opkg install busybox
+fi
+/opt/bin/opkg install entware-opt
+source /opt/etc/profile
+. /opt/etc/profile
+# Fix for multiuser environment
+chmod 777 /opt/tmp
+
+
+# use the installed find to remove potentially conflicting files:
+
+find /tmp/opt/etc/init.d -maxdepth 1 -mindepth 1  -not \( -name 'myscript' \) -exec rm -rf {} \;
+
+find /tmp/opt/etc/ -maxdepth 1 -mindepth 1  -not \( -name 'init.d' \) -exec rm -rf {} \;
+
+find /tmp/opt -maxdepth 1 -mindepth 1  -not \( -name 'etc'  -o -name '.asusrouter' \) -exec rm -rf {} \;
+
+
+# install again
+
+wget http://bin.entware.net/armv7sf-k2.6/installer/generic.sh -O /tmp/generics.sh
+chmod +x /tmp/generics.sh
+/tmp/generics.sh
+source /opt/etc/profile
+. /opt/etc/profile
+opkg install openssh-client openssh-client-utils
+opkg install autossh nano
+fi
+
+source /opt/etc/profile
+. /opt/etc/profile
+
+cp -r /tmp/mnt/KIOXIA/.ssh/id_rsa_router* ~/.ssh
+chmod 600 ~/.ssh/id_rsa_router
+chmod 600 ~/.ssh/id_rsa_router_db
+
+cp -r /tmp/mnt/KIOXIA/config /etc
+#dropbearconvert openssh dropbear ~/.ssh/id_rsa_router ~/.ssh/id_rsa_dropbear_router
+#cat   >> /root/.ssh/authorized_keys
+# 
+
+mkdir -p /mnt/KIOXIA/myscripts/logs
+mv /mnt/KIOXIA/myscripts/ssh.log "/mnt/KIOXIA/myscripts/logs/$(date +"%Y-%m-%d-%H-%M-%s-%S")"
+
+nohup /mnt/KIOXIA/myscripts/my_simple_autossh >/dev/null 2>&1 &
+nohup /mnt/KIOXIA/myscripts/my_simple_autossh_forward >/dev/null 2>&1 &
